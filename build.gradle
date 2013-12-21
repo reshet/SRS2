@@ -1,0 +1,71 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.eriwen:gradle-js-plugin:1.9.0'
+    }
+}
+
+// Invoke the plugin
+apply plugin: 'js'
+
+// Declare your sources
+javascript.source {
+    dev {
+        js {
+            srcDir "src/main/"
+            include "*.js"
+            exclude "*.min.js"
+        }
+    }
+    prod {
+        js {
+            srcDir "src/main/"
+            include "*.min.js"
+        }
+    }
+}
+
+env = 'dev'
+// Specify a collection of files to be combined, then minified and finally GZip compressed.
+task combinejs(type: com.eriwen.gradle.js.tasks.CombineJsTask) {
+    if (env == 'prod') {
+        source = javascript.source.prod.js.files
+    } else {
+        source = javascript.source.dev.js.files
+    }
+    dest = file("${buildDir}/all.js")
+}
+
+task minifyjs(type: com.eriwen.gradle.js.tasks.MinifyJsTask) {
+    source = combinejs
+    dest = file("${buildDir}/all-min.js")
+    closure {
+        warningLevel = 'QUIET'
+    }
+}
+task gzipjs(type: com.eriwen.gradle.js.tasks.GzipJsTask) {
+    source = minifyjs
+    dest = file("${buildDir}/all-min.js")
+}
+
+task require(type: com.eriwen.gradle.js.tasks.RequireJsTask) {
+    source = javascript.source.dev.js.files
+    dest = "${buildDir}/out.js"
+    requirejs.buildprofile = new File("build.js")
+}
+
+
+task hello << {
+    println 'Hello world!'
+}
+task intro(dependsOn: hello) << {
+    println "I'm Gradle"
+}
+task count(dependsOn: intro) << {
+    5.times{
+        print "$it "
+    }
+    println ""
+}
